@@ -1,35 +1,95 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from "react";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+declare global {
+  interface Window {
+    Telegram?: any;
+  }
 }
 
-export default App
+function App() {
+  const [tg, setTg] = useState<any>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // If already loaded
+    if (window.Telegram?.WebApp) {
+      const webApp = window.Telegram.WebApp;
+      webApp.ready();
+      webApp.expand();
+      setTg(webApp);
+      setIsReady(true);
+      return;
+    }
+
+    // Load Telegram script dynamically
+    const script = document.createElement("script");
+    script.src = "https://telegram.org/js/telegram-web-app.js";
+    script.async = true;
+
+    script.onload = () => {
+      if (window.Telegram?.WebApp) {
+        const webApp = window.Telegram.WebApp;
+        webApp.ready();
+        webApp.expand();
+        setTg(webApp);
+        setIsReady(true);
+      }
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  if (!window.Telegram?.WebApp) {
+    return (
+      <div style={{ padding: 20 }}>
+        <h2>Please open this Mini App inside Telegram</h2>
+      </div>
+    );
+  }
+
+  if (!isReady) {
+    return <div style={{ padding: 20 }}>Loading Telegram...</div>;
+  }
+
+  const user = tg?.initDataUnsafe?.user;
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h1>MM Test App 🚀</h1>
+
+      {user && (
+        <div>
+          <p><strong>Name:</strong> {user.first_name}</p>
+          <p><strong>ID:</strong> {user.id}</p>
+          <p><strong>Username:</strong> {user.username}</p>
+        </div>
+      )}
+
+      <button
+        style={{
+          marginTop: 20,
+          padding: "10px 16px",
+          borderRadius: 8,
+          cursor: "pointer",
+        }}
+        onClick={() => {
+          tg.sendData(
+            JSON.stringify({
+              action: "button_clicked",
+              userId: user?.id,
+            })
+          );
+        }}
+      >
+        Send Data to Bot
+      </button>
+    </div>
+  );
+}
+
+export default App;
